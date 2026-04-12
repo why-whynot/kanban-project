@@ -8,7 +8,6 @@ Follow the project delivery plan in [BUILD_PLAN.md](./BUILD_PLAN.md) for setup, 
 
 ## Avoid These Mistakes
 - ❌ Clunky drag-and-drop: Make drag-and-drop smooth and intuitive.
-- ❌ Ugly UI: Keep the interface clean, consistent, and polished.
 
 ## Quick Start (Local)
 From the project folder:
@@ -29,6 +28,8 @@ python3 -m http.server 8080
 then open:
 http://localhost:8080
 
+**Workflow**: Click "+ New Task" to create tasks (they start in "To Do"). Drag tasks between columns to change their status!
+
 
 ## �� Database Setup (Required)
 Follow [supabase-setup.md](./supabase-setup.md):
@@ -38,9 +39,9 @@ Follow [supabase-setup.md](./supabase-setup.md):
 
 ## Features Implemented
 ✅ **Required**:
-- [x] Drag & drop across 4 columns (To Do → In Progress → In Review → Done)
+- [x] Drag & drop across 4 columns (To Do → In Progress → In Review → Done) - **Elegant implementation with smooth animations and visual feedback**
 - [x] Guest auth + RLS (users see only own tasks)
-- [x] Create tasks (title, desc, priority, due date)
+- [x] Create tasks (title, desc, priority, due date) - **Tasks created in "To Do" column, drag to change status**
 - [x] Real-time persistence
 - [x] Delete tasks
 - [x] Responsive UI + loading/error states
@@ -61,7 +62,7 @@ vercel
 ## Tech Stack
 - Vanilla JS + modern ES modules
 - Supabase (DB + Auth + RLS)
-- Drag & drop API (native)
+- Custom mouse-based drag & drop (no HTML5 Drag API)
 - CDN-hosted Supabase client (no build step)
 
 ## Database Schema

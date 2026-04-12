@@ -17,6 +17,19 @@ class KanbanApp {
     this.initialization = null;
     this.authReady = false;
     this.editingTaskId = null;
+    this.dragTestMode = false; // Add test mode flag
+
+    // Drag and drop state variables
+    this.draggedTask = null;
+    this.draggedElement = null;
+    this.ghostElement = null;
+    this.placeholder = null;
+    this.startColumn = null;
+    this.initialX = 0;
+    this.initialY = 0;
+    this.dragOffsetX = 0;
+    this.dragOffsetY = 0;
+    this.isDragging = false;
 
     // Bind UI events immediately for responsiveness
     this.bindEvents();
@@ -107,6 +120,17 @@ class KanbanApp {
 
     cancelTask.addEventListener('click', () => this.hideTaskModal());
 
+    // Add test mode toggle (double-click header)
+    const header = document.querySelector('header h1');
+    if (header) {
+      header.addEventListener('dblclick', () => {
+        this.dragTestMode = !this.dragTestMode;
+        console.log('🎯 Drag test mode:', this.dragTestMode ? 'ON' : 'OFF');
+        this.showTestNotification(this.dragTestMode ? 'Test Mode ON - Drag feedback enabled' : 'Test Mode OFF');
+        this.updateTestVisuals();
+      });
+    }
+
     this.setupTaskInteractions();
   }
 
@@ -139,6 +163,7 @@ class KanbanApp {
       
       this.renderBoard();
       this.updateStats();
+      this.updateTestVisuals();
     } catch (error) {
       console.error('Load tasks error:', error);
       this.showError('Failed to load tasks');
@@ -172,7 +197,7 @@ class KanbanApp {
       id: `local-${Date.now()}`, // Generate ID for local mode
       title,
       description: document.getElementById('task-description').value.trim(),
-      status: document.getElementById('task-status').value || 'todo',
+      status: 'todo', // Always create tasks in todo status
       priority: document.getElementById('task-priority').value,
       due_date: document.getElementById('task-due-date').value || null,
       user_id: user?.id || 'demo-user',
@@ -254,7 +279,7 @@ class KanbanApp {
       ...tasks[taskIndex],
       title,
       description: document.getElementById('task-description').value.trim(),
-      status: document.getElementById('task-status').value || 'todo',
+      // Don't change status in edit mode - use drag and drop for status changes
       priority: document.getElementById('task-priority').value,
       due_date: document.getElementById('task-due-date').value || null
     };
@@ -342,7 +367,7 @@ class KanbanApp {
       }
 
       container.innerHTML = statusTasks.map(task => `
-        <div class="task priority-${task.priority}" data-id="${task.id}">
+        <div class="task priority-${task.priority}" data-id="${task.id}" data-status="${task.status}">
           <button class="task-delete" data-id="${task.id}" aria-label="Delete task">×</button>
           <div class="task-title">${task.title}</div>
           ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
@@ -397,8 +422,16 @@ class KanbanApp {
 
   setupTaskInteractions() {
     const board = document.getElementById('board');
+    let wasDragged = false;
 
+    // Click handlers for delete and edit
     board.addEventListener('click', (e) => {
+      // Prevent click if we just finished dragging
+      if (wasDragged) {
+        wasDragged = false;
+        return;
+      }
+
       const deleteBtn = e.target.closest('.task-delete');
       if (deleteBtn) {
         e.stopPropagation();
@@ -416,6 +449,260 @@ class KanbanApp {
         this.showTaskModal(true, task);
       }
     });
+
+    // Drag and drop functionality
+    this.setupDragAndDrop(() => { wasDragged = true; });
+  }
+
+  setupDragAndDrop(onDragComplete) {
+    const handleMouseDown = (e) => {
+      if (e.button !== 0) return; // only left click
+      const task = e.target.closest('.task');
+      if (!task || e.target.closest('.task-delete')) return;
+
+      e.preventDefault();
+      const rect = task.getBoundingClientRect();
+      this.dragOffsetX = e.clientX - rect.left;
+      this.dragOffsetY = e.clientY - rect.top;
+      this.draggedTask = task;
+      this.draggedElement = null;
+      this.ghostElement = null;
+      this.startColumn = task.closest('.column');
+      this.initialX = e.clientX;
+      this.initialY = e.clientY;
+      this.isDragging = false;
+      task.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'grabbing';
+
+      if (this.dragTestMode) {
+        console.log('🎯 Drag started on task:', task.dataset.id);
+      }
+    };
+
+    const handleMouseMove = (e) => {
+      if (!this.draggedTask) return;
+
+      if (!this.isDragging) {
+        const deltaX = Math.abs(e.clientX - this.initialX);
+        const deltaY = Math.abs(e.clientY - this.initialY);
+        if (deltaX < 10 && deltaY < 10) return; // Minimum drag distance
+
+        this.isDragging = true;
+        if (this.dragTestMode) {
+          console.log('🚀 Drag initiated - starting visual drag');
+        }
+        this.startDrag(this.draggedTask);
+      }
+
+      if (this.isDragging) {
+        e.preventDefault();
+        this.updateDragPosition(e);
+        this.updateDropTarget(e);
+      }
+    };
+
+    const handleMouseUp = async (e) => {
+      if (!this.draggedTask) return;
+
+        if (this.isDragging) {
+        if (this.dragTestMode) {
+          console.log('✅ Drag finished - processing drop');
+        }
+        await this.finishDrag(e);
+        if (onDragComplete) onDragComplete();
+      } else {
+        if (this.dragTestMode) {
+          console.log('👆 Just a click, not a drag');
+        }
+        if (this.draggedTask) {
+          this.draggedTask.style.cursor = '';
+        }
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+      }
+
+      this.draggedTask = null;
+      this.draggedElement = null;
+      this.ghostElement = null;
+      this.placeholder = null;
+      this.startColumn = null;
+      this.isDragging = false;
+    };
+
+    const handleContextMenu = (e) => {
+      if (this.draggedTask) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    const handleSelectStart = (e) => {
+      if (this.draggedTask) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    const handleDragStart = (e) => {
+      if (this.draggedTask) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    // Add event listeners
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mouseleave', handleMouseUp);
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('selectstart', handleSelectStart);
+    document.addEventListener('dragstart', handleDragStart);
+  }
+
+  startDrag(task) {
+    const rect = task.getBoundingClientRect();
+    this.ghostElement = task.cloneNode(true);
+    this.draggedElement = this.ghostElement;
+
+    // Create placeholder in original list at the task's position
+    this.placeholder = document.createElement('div');
+    this.placeholder.className = 'task-placeholder';
+    this.placeholder.style.height = `${rect.height}px`;
+    this.placeholder.style.width = `${rect.width}px`;
+    this.placeholder.style.minHeight = '60px';
+    this.placeholder.style.margin = '6px 0';
+    this.placeholder.style.background = 'rgba(255, 255, 255, 0.95)';
+    this.placeholder.style.border = '2px dashed rgba(102, 126, 234, 0.35)';
+    this.placeholder.style.borderRadius = '12px';
+    this.placeholder.style.boxSizing = 'border-box';
+    task.parentNode.insertBefore(this.placeholder, task);
+
+    // Hide original task while dragging a ghost copy
+    task.classList.add('ghost');
+    task.style.visibility = 'hidden';
+    task.style.pointerEvents = 'none';
+
+    // Setup ghost drag image
+    this.ghostElement.classList.add('dragging');
+    this.ghostElement.style.position = 'fixed';
+    this.ghostElement.style.left = `${rect.left}px`;
+    this.ghostElement.style.top = `${rect.top}px`;
+    this.ghostElement.style.width = `${rect.width}px`;
+    this.ghostElement.style.height = `${rect.height}px`;
+    this.ghostElement.style.zIndex = '1000';
+    this.ghostElement.style.pointerEvents = 'none';
+    this.ghostElement.style.transform = 'rotate(2deg) scale(1.02)';
+    this.ghostElement.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.2)';
+    this.ghostElement.style.transition = 'none';
+    document.body.appendChild(this.ghostElement);
+
+    setTimeout(() => {
+      if (this.ghostElement) {
+        this.ghostElement.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease, left 0.2s ease, top 0.2s ease';
+      }
+    }, 0);
+  }
+
+  updateDragPosition(e) {
+    if (!this.draggedElement) return;
+    
+    const x = e.clientX - this.dragOffsetX;
+    const y = e.clientY - this.dragOffsetY;
+    
+    this.draggedElement.style.left = `${x}px`;
+    this.draggedElement.style.top = `${y}px`;
+  }
+
+  updateDropTarget(e) {
+    // Clear previous highlights
+    this.clearDropHighlights();
+    
+    // Find column under mouse
+    const columns = document.querySelectorAll('.column');
+    for (const column of columns) {
+      const rect = column.getBoundingClientRect();
+      if (e.clientX >= rect.left && e.clientX <= rect.right && 
+          e.clientY >= rect.top && e.clientY <= rect.bottom) {
+        column.classList.add('drop-target');
+        break;
+      }
+    }
+  }
+
+  clearDropHighlights() {
+    const columns = document.querySelectorAll('.column');
+    columns.forEach(column => column.classList.remove('drop-target'));
+  }
+
+  async finishDrag(e) {
+    const dropColumn = document.querySelector('.column.drop-target');
+    const newStatus = dropColumn ? dropColumn.dataset.status : null;
+    const taskId = this.draggedTask.dataset.id;
+    const currentStatus = this.draggedTask.dataset.status;
+    const originalTask = this.draggedTask;
+
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+
+    // Remove ghost drag clone
+    if (this.ghostElement && this.ghostElement.parentNode) {
+      this.ghostElement.parentNode.removeChild(this.ghostElement);
+    }
+
+    // Restore original task appearance
+    originalTask.style.visibility = '';
+    originalTask.style.pointerEvents = '';
+    originalTask.classList.remove('ghost');
+
+    this.dragOffsetX = 0;
+    this.dragOffsetY = 0;
+
+    // Remove placeholder
+    if (this.placeholder && this.placeholder.parentNode) {
+      this.placeholder.parentNode.removeChild(this.placeholder);
+    }
+
+    // Clear highlights
+    this.clearDropHighlights();
+
+    // Handle drop
+    if (dropColumn && newStatus && newStatus !== currentStatus) {
+      const tasksContainer = dropColumn.querySelector('.tasks');
+      if (tasksContainer) {
+        tasksContainer.appendChild(originalTask);
+        await this.updateTaskStatus(taskId, newStatus);
+        
+        originalTask.style.transform = 'scale(1.05)';
+        originalTask.style.boxShadow = '0 10px 30px rgba(16, 185, 129, 0.3)';
+        originalTask.classList.add('success-move');
+        setTimeout(() => {
+          originalTask.style.transform = '';
+          originalTask.style.boxShadow = '';
+          originalTask.classList.remove('success-move');
+        }, 600);
+      }
+    } else if (dropColumn && newStatus === currentStatus) {
+      const tasksContainer = dropColumn.querySelector('.tasks');
+      if (tasksContainer) {
+        tasksContainer.appendChild(originalTask);
+      }
+    } else {
+      if (this.startColumn) {
+        const tasksContainer = this.startColumn.querySelector('.tasks');
+        if (tasksContainer) {
+          tasksContainer.appendChild(originalTask);
+        }
+      }
+      originalTask.style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        originalTask.style.transform = '';
+      }, 200);
+    }
+
+    this.draggedElement = null;
+    this.ghostElement = null;
   }
 
   showTaskModal(editMode = false, task = null) {
@@ -439,7 +726,6 @@ class KanbanApp {
         document.getElementById('task-title').value = task.title;
         document.getElementById('task-description').value = task.description || '';
         document.getElementById('task-priority').value = task.priority || 'normal';
-        document.getElementById('task-status').value = task.status || 'todo';
         document.getElementById('task-due-date').value = task.due_date || '';
         this.editingTaskId = task.id;
         if (submitButton) submitButton.textContent = 'Save Changes';
@@ -478,6 +764,38 @@ class KanbanApp {
     toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:12px 20px;border-radius:8px;z-index:10000;';
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
+  }
+
+  showTestNotification(message) {
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #3b82f6;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      z-index: 10000;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 2000);
+  }
+
+  updateTestVisuals() {
+    const tasks = document.querySelectorAll('.task');
+    tasks.forEach(task => {
+      if (this.dragTestMode) {
+        task.style.border = '2px solid #3b82f6';
+        task.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.2)';
+      } else {
+        task.style.border = '';
+        task.style.boxShadow = '';
+      }
+    });
   }
 }
 
