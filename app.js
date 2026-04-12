@@ -8,7 +8,6 @@ let user = null;
 let tasks = [];
 const statuses = ['todo', 'in_progress', 'in_review', 'done'];
 
-// Supabase config - REPLACE WITH YOUR PROJECT CREDENTIALS
 const SUPABASE_URL = 'https://oeongqjjfnenfzjdrhwr.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lb25ncWpqZm5lbmZ6amRyaHdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMTUwMTEsImV4cCI6MjA5MTU5MTAxMX0.qZc0qtn8AWpCW5v7W3lLH-ucwkb1KEOEID394dDRN_A';
 

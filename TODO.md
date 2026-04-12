@@ -1,35 +1,13 @@
-# Kanban Task Board Debug TODO
+# Kanban Task Board Fix Plan
 
-## Current Progress
-- [x] Analyzed index.html, app.js, style.css
-- [x] Created debug plan with console.log tracking  
-- [x] Add debug logs to app.js (bindEvents, click handler, showTaskModal) ✓
+## Current Status
+- [x] Analyze files and identify errors
+- [x] Create detailed fix plan
+- [ ] Fix app.js merge conflicts & duplicate declarations  
+- [ ] Fix app.js drag/drop implementation
+- [ ] Fix style.css minor conflicts
+- [ ] Test functionality (CRUD, drag/drop, Supabase)
+- [ ] Complete & verify
 
-**🔍 Test Instructions (Thorough Testing):**
-```bash
-# macOS: Open in default browser
-From the project folder:
-cd /Users/sujithrallapalli/Desktop/kanban-task-board
-open index.html
-
-Or run a local web server and open it in the browser:
-cd /Users/sujithrallapalli/Desktop/kanban-task-board
-python3 -m http.server 8000
-
-then
-http://localhost:8000
-```
-
-**Expected Console Flow:**
-1. Page load → `🔧 bindEvents() executed`
-2. Click "+ New Task" → `🆕 Add task button clicked!` → `📱 showTaskModal called`
-3. Modal appears (inspect: `.modal.active`)
-4. No JS errors
-
-**Debug Checklist:**
-- [ ] bindEvents log appears
-- [ ] Click logs fire  
-- [ ] Modal visible
-- [ ] Drag-drop works
-- [ ] No console errors
-
+## Progress
+Starting with app.js merge conflict cleanup...

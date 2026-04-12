@@ -6,8 +6,6 @@
 ## Build Plan
 Follow the project delivery plan in [BUILD_PLAN.md](./BUILD_PLAN.md) for setup, Supabase integration, drag-and-drop, UI polish, and deployment.
 
-## Avoid These Mistakes
-- ❌ Clunky drag-and-drop: Make drag-and-drop smooth and intuitive.
 
 ## Quick Start (Local)
 From the project folder:
