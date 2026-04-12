@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanban Task Board</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>My Task Board</h1>
+      <div class="stats">
+        <span id="total-tasks">0</span> tasks
+      </div>
+      <button id="add-task-btn">+ New Task</button>
+    </header>
+
+    <div class="board" id="board">
+      <div class="column" data-status="todo">
+        <h2>To Do</h2>
+        <div class="tasks" id="todo-tasks"></div>
+      </div>
+      <div class="column" data-status="in_progress">
+        <h2>In Progress</h2>
+        <div class="tasks" id="in_progress-tasks"></div>
+      </div>
+      <div class="column" data-status="in_review">
+        <h2>In Review</h2>
+        <div class="tasks" id="in_review-tasks"></div>
+      </div>
+      <div class="column" data-status="done">
+        <h2>Done</h2>
+        <div class="tasks" id="done-tasks"></div>
+      </div>
+    </div>
+
+    <!-- Task Form Modal -->
+    <div class="modal" id="task-modal">
+      <div class="modal-content">
+        <h2 id="modal-title">New Task</h2>
+        <form id="task-form">
+          <input type="text" id="task-title" placeholder="Task title" required>
+          <textarea id="task-description" placeholder="Description (optional)"></textarea>
+          <select id="task-priority">
+            <option value="low">Low</option>
+            <option value="normal" selected>Normal</option>
+            <option value="high">High</option>
+          </select>
+          <input type="date" id="task-due-date">
+          <div class="form-actions">
+            <button type="submit">Create Task</button>
+            <button type="button" id="cancel-task">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
