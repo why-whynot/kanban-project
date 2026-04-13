@@ -42,6 +42,7 @@ create table if not exists public.tasks (
   title text not null,
   status text not null check (status in ('todo', 'in_progress', 'in_review', 'done')),
   user_id uuid not null references auth.users(id) on delete cascade,
+  owner_name text,
   description text,
   priority text default 'normal' check (priority in ('low', 'normal', 'high')),
   due_date date,
@@ -53,23 +54,38 @@ alter table public.tasks enable row level security;
 create policy "tasks_select_own"
 on public.tasks
 for select
-using (auth.uid() = user_id);
+using (
+  auth.uid() = user_id
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+);
 
 create policy "tasks_insert_own"
 on public.tasks
 for insert
-with check (auth.uid() = user_id);
+with check (
+  auth.uid() = user_id
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+);
 
 create policy "tasks_update_own"
 on public.tasks
 for update
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+using (
+  auth.uid() = user_id
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+)
+with check (
+  auth.uid() = user_id
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+);
 
 create policy "tasks_delete_own"
 on public.tasks
 for delete
-using (auth.uid() = user_id);
+using (
+  auth.uid() = user_id
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+);
 ```
 
 ## Local Setup Instructions

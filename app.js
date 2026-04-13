@@ -18,6 +18,7 @@ class KanbanApp {
     this.editingTaskId = null;
     this.dragTestMode = false;
     this.tasksLoaded = false;
+    this.ownerNameSupport = null;
 
     // Drag and drop state variables
     this.draggedTask = null;
@@ -109,6 +110,24 @@ class KanbanApp {
     return `tasks_${user?.id || this.getLocalGuestId()}`;
   }
 
+  getUsernameStorageKey() {
+    return `username_${user?.id || this.getLocalGuestId()}`;
+  }
+
+  getSavedUsername() {
+    return localStorage.getItem(this.getUsernameStorageKey()) || 'Guest';
+  }
+
+  getCurrentOwnerName() {
+    const username = this.getSavedUsername().trim();
+    return username && username !== 'Guest' ? username : null;
+  }
+
+  isOwnerNameSchemaError(error) {
+    const message = error?.message || '';
+    return message.includes('owner_name') || message.includes('display_name');
+  }
+
   persistTasks() {
     localStorage.setItem(this.getTaskStorageKey(), JSON.stringify(tasks));
   }
@@ -141,7 +160,7 @@ class KanbanApp {
   }
 
   loadUsername() {
-    const savedUsername = localStorage.getItem('kanban-username') || 'Guest';
+    const savedUsername = this.getSavedUsername();
     const usernameDisplay = document.getElementById('username-display');
     const usernameInput = document.getElementById('username-input');
     if (usernameDisplay) {
@@ -186,7 +205,7 @@ class KanbanApp {
   }
 
   hideAccountModal() {
-    const savedUsername = localStorage.getItem('kanban-username') || 'Guest';
+    const savedUsername = this.getSavedUsername();
     if (savedUsername !== 'Guest') {
       this.showBoard();
     }
@@ -262,11 +281,35 @@ class KanbanApp {
     
     try {
       if (supabase && user) {
-        const { data, error } = await supabase
-          .from('tasks')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+        const ownerName = this.getCurrentOwnerName();
+        let data;
+        let error;
+
+        if (ownerName && this.ownerNameSupport !== false) {
+          ({ data, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .eq('owner_name', ownerName)
+            .order('created_at', { ascending: false }));
+
+          if (error && this.isOwnerNameSchemaError(error)) {
+            this.ownerNameSupport = false;
+            ({ data, error } = await supabase
+              .from('tasks')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false }));
+            this.showError('Supabase schema still uses user-only tasks. Run the updated SQL to enable cross-browser username sharing.');
+          } else if (!error) {
+            this.ownerNameSupport = true;
+          }
+        } else {
+          ({ data, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false }));
+        }
         
         if (error) throw error;
         tasks = data || [];
@@ -297,14 +340,23 @@ class KanbanApp {
       return;
     }
 
-    localStorage.setItem('kanban-username', username);
+    localStorage.setItem(this.getUsernameStorageKey(), username);
+    if (supabase) {
+      supabase.auth.updateUser({ data: { display_name: username } }).catch((error) => {
+        console.warn('Could not sync username to Supabase auth metadata:', error?.message || error);
+      });
+    }
+    this.tasksLoaded = false;
+    tasks = [];
     document.getElementById('username-display').textContent = username;
     this.showSuccess('Username saved');
     this.showBoard();
   }
 
   continueAsGuest() {
-    localStorage.setItem('kanban-username', 'Guest');
+    localStorage.setItem(this.getUsernameStorageKey(), 'Guest');
+    this.tasksLoaded = false;
+    tasks = [];
     document.getElementById('username-display').textContent = 'Guest';
     this.showBoard();
   }
@@ -337,6 +389,7 @@ class KanbanApp {
       status: 'todo', // Always create tasks in todo status
       priority: document.getElementById('task-priority').value,
       due_date: document.getElementById('task-due-date').value || null,
+      owner_name: this.getCurrentOwnerName(),
       user_id: user?.id || 'demo-user',
       created_at: new Date().toISOString()
     };
@@ -352,11 +405,22 @@ class KanbanApp {
         const insertTask = { ...newTask };
         delete insertTask.id; // let Supabase generate the UUID
 
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('tasks')
           .insert([insertTask])
           .select()
           .single();
+
+        if (error && this.isOwnerNameSchemaError(error)) {
+          this.ownerNameSupport = false;
+          delete insertTask.owner_name;
+          ({ data, error } = await supabase
+            .from('tasks')
+            .insert([insertTask])
+            .select()
+            .single());
+          this.showError('Task saved with user-only mode. Run the updated SQL to enable cross-browser username sharing.');
+        }
 
         if (error) {
           console.warn('Supabase insert failed, using local:', error.message);
@@ -418,7 +482,8 @@ class KanbanApp {
       description: document.getElementById('task-description').value.trim(),
       // Don't change status in edit mode - use drag and drop for status changes
       priority: document.getElementById('task-priority').value,
-      due_date: document.getElementById('task-due-date').value || null
+      due_date: document.getElementById('task-due-date').value || null,
+      owner_name: this.getCurrentOwnerName()
     };
 
     tasks[taskIndex] = updatedTask;
@@ -433,13 +498,33 @@ class KanbanApp {
           due_date: updatedTask.due_date
         };
 
-        const { data, error } = await supabase
+        if (this.getCurrentOwnerName()) {
+          updatePayload.owner_name = this.getCurrentOwnerName();
+        }
+
+        const scopedUpdate = supabase
           .from('tasks')
           .update(updatePayload)
-          .eq('id', taskId)
-          .eq('user_id', user.id)
-          .select()
-          .single();
+          .eq('id', taskId);
+
+        let result = this.getCurrentOwnerName() && this.ownerNameSupport !== false
+          ? await scopedUpdate.eq('owner_name', this.getCurrentOwnerName()).select().single()
+          : await scopedUpdate.eq('user_id', user.id).select().single();
+
+        if (result.error && this.isOwnerNameSchemaError(result.error)) {
+          this.ownerNameSupport = false;
+          delete updatePayload.owner_name;
+          result = await supabase
+            .from('tasks')
+            .update(updatePayload)
+            .eq('id', taskId)
+            .eq('user_id', user.id)
+            .select()
+            .single();
+          this.showError('Task updated in user-only mode. Run the updated SQL to enable cross-browser username sharing.');
+        }
+
+        const { data, error } = result;
 
         if (error) {
           console.warn('Supabase update failed, using local data:', error.message);
@@ -472,11 +557,31 @@ class KanbanApp {
 
     try {
       if (supabase && user) {
-        const { error } = await supabase
-          .from('tasks')
-          .update({ status: newStatus })
-          .eq('id', taskId)
-          .eq('user_id', user.id);
+        let result;
+        if (this.getCurrentOwnerName() && this.ownerNameSupport !== false) {
+          result = await supabase
+            .from('tasks')
+            .update({ status: newStatus })
+            .eq('id', taskId)
+            .eq('owner_name', this.getCurrentOwnerName());
+          if (result.error && this.isOwnerNameSchemaError(result.error)) {
+            this.ownerNameSupport = false;
+            result = await supabase
+              .from('tasks')
+              .update({ status: newStatus })
+              .eq('id', taskId)
+              .eq('user_id', user.id);
+            this.showError('Status updated in user-only mode. Run the updated SQL to enable cross-browser username sharing.');
+          }
+        } else {
+          result = await supabase
+            .from('tasks')
+            .update({ status: newStatus })
+            .eq('id', taskId)
+            .eq('user_id', user.id);
+        }
+
+        const { error } = result;
         if (error) throw error;
       }
       this.persistTasks();
@@ -545,11 +650,31 @@ class KanbanApp {
 
     try {
       if (supabase && user) {
-        const { error } = await supabase
-          .from('tasks')
-          .delete()
-          .eq('id', taskId)
-          .eq('user_id', user.id);
+        let result;
+        if (this.getCurrentOwnerName() && this.ownerNameSupport !== false) {
+          result = await supabase
+            .from('tasks')
+            .delete()
+            .eq('id', taskId)
+            .eq('owner_name', this.getCurrentOwnerName());
+          if (result.error && this.isOwnerNameSchemaError(result.error)) {
+            this.ownerNameSupport = false;
+            result = await supabase
+              .from('tasks')
+              .delete()
+              .eq('id', taskId)
+              .eq('user_id', user.id);
+            this.showError('Delete used user-only mode. Run the updated SQL to enable cross-browser username sharing.');
+          }
+        } else {
+          result = await supabase
+            .from('tasks')
+            .delete()
+            .eq('id', taskId)
+            .eq('user_id', user.id);
+        }
+
+        const { error } = result;
         if (error) {
           console.warn('Supabase delete failed:', error.message);
         }
