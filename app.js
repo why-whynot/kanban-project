@@ -365,18 +365,26 @@ class KanbanApp {
         return;
       }
 
-      container.innerHTML = statusTasks.map(task => `
-        <div class="task priority-${task.priority}" data-id="${task.id}" data-status="${task.status}">
+      container.innerHTML = statusTasks.map(task => {
+        const isOverdue = task.due_date && !this.isTaskDone(task) && new Date(task.due_date) < new Date(new Date().toISOString().split('T')[0]);
+        const overdueClass = isOverdue ? 'overdue' : '';
+        return `
+        <div class="task priority-${task.priority} ${overdueClass}" data-id="${task.id}" data-status="${task.status}">
           <button class="task-delete" data-id="${task.id}" aria-label="Delete task">×</button>
           <div class="task-title">${task.title}</div>
           ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
           <div class="task-meta">
             <span>${new Date(task.created_at).toLocaleDateString()}</span>
-            ${task.due_date ? `<span>${task.due_date}</span>` : ''}
+            ${task.due_date ? `<span class="due-date ${isOverdue ? 'due-overdue' : ''}">📅 ${task.due_date}</span>` : ''}
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     });
+  }
+
+  isTaskDone(task) {
+    return task.status === 'done';
   }
 
   async deleteTask(taskId) {

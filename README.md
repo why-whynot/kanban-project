@@ -77,5 +77,3 @@ CREATE TABLE tasks (
 );
 -- RLS: auth.uid() = user_id
 ```
-
-**Ready for assessment submission!**

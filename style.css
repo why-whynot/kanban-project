@@ -214,6 +214,32 @@ h1 {
   color: #9ca3af;
 }
 
+.due-date {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #f0f9ff;
+  color: #0369a1;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.due-date.due-overdue {
+  background: #fef2f2;
+  color: #dc2626;
+  font-weight: 600;
+  padding: 4px 8px;
+}
+
+.task.overdue {
+  border-left-color: #dc2626 !important;
+  background: linear-gradient(to right, rgba(220, 38, 38, 0.03), white);
+}
+
+.task.overdue .task-title {
+  color: #dc2626;
+  font-weight: 700;
+}
+
 .priority-high { border-left-color: #ef4444 !important; }
 .priority-normal { border-left-color: #10b981 !important; }
 .priority-low { border-left-color: #3b82f6 !important; }
