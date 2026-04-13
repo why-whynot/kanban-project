@@ -1,7 +1,5 @@
 name = "kanban-project"
 compatibility_date = "2024-10-13"
-observability = { enabled = true }
 
 [[assets]]
 directory = "."
-exclude = ["node_modules/**"]
