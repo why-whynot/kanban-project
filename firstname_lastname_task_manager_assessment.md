@@ -1,108 +1,98 @@
 # Kanban Task Board Assessment Submission
 
-**Candidate:** [Your Full Name Here]  
-**Date:** [Current Date]  
+Candidate: `[Your Full Name]`  
+Date: `April 12, 2026`
 
-## 1. Live Frontend App
-- **Local Demo:** `open index.html` (instant, no setup)
-- **Deployed URL:** [Vercel URL after `vercel --prod`] or https://kanban-task-board.vercel.app (placeholder)
-- **GitHub Repository:** https://github.com/[your-username]/kanban-task-board (push this folder)
+## Overview
+I built a Kanban-style task board focused on visual polish, clear task management, and secure guest access. The experience is designed to feel closer to a lightweight product than a basic todo list, with a strong emphasis on hierarchy, smooth interactions, and readable status cues.
 
-## 2. Solution Overview & Design Decisions
-A **production-polished Kanban board** built in **vanilla HTML/CSS/JavaScript** for maximum simplicity, performance, and instant deployment. No frameworks/build tools - runs anywhere.
+The app uses vanilla HTML, CSS, and JavaScript with Supabase for persistence and anonymous authentication. I chose this stack to keep the app lightweight, fast to load, and easy to deploy while still meeting the full assessment requirements.
 
-**Key Decisions:**
-- **Tech Stack:** Vanilla JS + Supabase (auth/DB/RLS). Matches "use what you're strongest in" - lightweight (no React overhead).
-- **Design System:** Linear/Asana-inspired glassmorphism (gradients, blur, shadows). Cohesive palette (#667eea → #764ba2 primary, status colors). Smooth micro-interactions (drag physics, success pulses).
-- **Guest Auth:** Supabase anonymous sign-in + RLS for true multi-user isolation.
-- **Drag-Drop:** Custom implementation (ghost clone, placeholder, haptic feedback) - more control than libs.
+## Live App
+- Live frontend URL: `[Add deployed URL]`
+- GitHub repository: `[Add repository URL]`
 
-**Timeline:** 4 hours (1h setup/DB, 1h core UI/data, 1h drag-drop, 1h polish).
+## Design Decisions
+- Used a card-based Kanban layout with strong spacing, gradients, shadows, and a clear status structure inspired by modern task tools.
+- Added a guest account landing page so users start with a clear entry point before entering the board.
+- Kept the interaction model direct: create a task, edit a task by clicking it, move it by dragging.
+- Added summary stats and due-date indicators so the board communicates workload at a glance.
 
-## 3. Features Delivered
-### Required Features (100% Complete)
-- ✅ **Kanban Board:** 4 columns w/ drag-drop status updates (optimistic + Supabase sync).
-- ✅ **Guest Accounts:** Auto anon auth, RLS (`user_id = auth.uid()`).
-- ✅ **Task CRUD:** Modal create/edit/delete, validation, persistence.
-- ✅ **Polish:** Loading states, error toasts, empty states, mobile-responsive.
+## Required Features Implemented
+- Four default columns: `To Do`, `In Progress`, `In Review`, `Done`
+- Drag-and-drop task movement between columns
+- Guest account support with Supabase anonymous sign-in
+- User-scoped tasks using `user_id`
+- Supabase persistence
+- Task creation with title, description, priority, and due date
+- Loading, error, and empty states
+- Responsive layout for smaller screens
 
-### Advanced Features (Bonus)
-- ✅ **Priority Levels:** Low/Normal/High (visual borders).
-- ✅ **Due Dates:** Picker + overdue detection/highlights (red badges).
-- ✅ **Stats:** Live task counter.
-- ✅ **UX Extras:** LocalStorage fallback, drag test mode (double-click header), smooth animations.
+## Additional Features
+- Task editing and deletion
+- Username display in the header
+- Overdue task highlighting
+- Summary stats for total, completed, and overdue tasks
+- Local storage fallback if Supabase is unavailable
 
-## 4. Database Schema (Supabase)
+## Database Schema
+```sql
+create table if not exists public.tasks (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  status text not null check (status in ('todo', 'in_progress', 'in_review', 'done')),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  description text,
+  priority text default 'normal' check (priority in ('low', 'normal', 'high')),
+  due_date date,
+  created_at timestamptz not null default now()
+);
+
+alter table public.tasks enable row level security;
+
+create policy "tasks_select_own"
+on public.tasks
+for select
+using (auth.uid() = user_id);
+
+create policy "tasks_insert_own"
+on public.tasks
+for insert
+with check (auth.uid() = user_id);
+
+create policy "tasks_update_own"
+on public.tasks
+for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create policy "tasks_delete_own"
+on public.tasks
+for delete
+using (auth.uid() = user_id);
 ```
-Project ID: oeongqjjfnenfzjdrhwr
-Anon Key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... (safe for client)
 
-Tables:
-┌────────────┬──────────────┬──────────────┬──────────────┬────────────┐
-│   Column   │   Type       │  Nullable    │   Default    │ Constraint │
-├────────────┼──────────────┼──────────────┼──────────────┼────────────┤
-│ id         │ uuid         │ not null     │ gen_random_  │ primary    │
-│            │              │              │ uuid()       │ key        │
-│ title      │ text         │ not null     │              │            │
-│ status     │ text         │ not null     │              │ CHECK(...) │
-│ user_id    │ uuid         │ not null     │              │            │
-│ created_at │ timestamptz  │ not null     │ now()        │            │
-│ priority   │ text         │              │              │ CHECK(...) │
-│ due_date   │ date         │              │              │            │
-│ desc...    │ text         │              │              │            │
-└────────────┴──────────────┴──────────────┴──────────────┴────────────┘
-
-RLS Policy: "Users can manage own tasks" - USING (user_id = auth.uid())
+## Local Setup Instructions
+```bash
+cd /Users/sujithrallapalli/Desktop/kanban-task-board
+python3 -m http.server 8000
 ```
 
-## 5. Local Setup Instructions
-```
-1. cd /path/to/kanban-task-board
-2. open index.html
-3. Auto-creates guest session
-4. Add/drag tasks - persists in Supabase
-```
+Then open `http://localhost:8000`.
 
-**Vercel (1 min):**
-```
-npm i -g vercel
-vercel --prod
-```
+If using a fresh Supabase project:
+1. Enable anonymous sign-in.
+2. Run the SQL schema and RLS policies.
+3. Add your project URL and anon key to `app.js`.
 
-## 6. Code Quality & Structure
-```
-├── index.html     # Semantic structure + CDN
-├── app.js         # KanbanApp class (modular, 500 LOC)
-├── style.css      # Design system (responsive, animated)
-├── vercel.json    # SPA routing
-├── TODO.md        # Progress tracker
-└── README.md      # This doc
-```
-- **Security:** Anon key only (no service role), RLS enforced.
-- **Performance:** <100KB total, instant load.
-- **Accessibility:** Keyboard-friendly modals, ARIA labels.
+## Tradeoffs
+- I chose vanilla JavaScript over React to keep the app smaller and reduce setup overhead.
+- I used direct Supabase access from the client rather than adding a separate backend API because the assessment can be completed securely with anonymous auth and RLS.
+- Drag and drop is custom-built rather than using a library, which gives more visual control but requires more manual handling.
 
-## 7. Tradeoffs & Future Improvements
-**What I Prioritized:**
-- Design (40% time) - "heavily evaluated".
-- Core drag-drop (30%) - smoothest possible.
-- Guest/RLS (20%) - true multi-user.
-
-**Tradeoffs:**
-| Choice | Pro | Con | Alternative |
-|--------|-----|-----|-------------|
-| Vanilla JS | Fast, no deps | No TS/hot-reload | React + Vite |
-| Client Supabase | Simple | Scale limits | Go API |
-| Custom Drag | Perfect control | More code | @dnd-kit |
-
-**Next Iterations (w/ more time):**
-1. **Comments/Activity:** Separate tables + timeline view.
-2. **Team:** Users table + assignees (avatars on cards).
-3. **Labels/Filter:** Custom tags + search bar.
-4. **PWA:** Offline sync, push notifications.
-5. **Dark Mode:** CSS vars toggle.
-
-This is a **deployable team tool** - not a demo. Happy to iterate!
-
----
-*Copy this to Google Docs/Word → Export PDF → Rename `firstname_lastname_task_manager_assessment.pdf`*
+## What I Would Improve With More Time
+- Add search and filtering by priority or status
+- Add labels/tags and assignees
+- Add a task details panel with comments and activity history
+- Improve keyboard accessibility for drag-and-drop interactions
+- Move Supabase config into a cleaner environment-driven setup for multi-environment deployment

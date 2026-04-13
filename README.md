@@ -1,79 +1,40 @@
-# Kanban Task Board - SDE Assessment
+# Kanban Task Board
 
-## Live Demo
-**TODO**: Deploy to Vercel: `vercel deploy` (see Deploy section)
+A polished Kanban-style task board built for the Next Play Games software development assessment. The app uses Supabase anonymous auth plus row-level security so each guest only sees their own tasks.
 
-## Build Plan
-Follow the project delivery plan in [BUILD_PLAN.md](./BUILD_PLAN.md) for setup, Supabase integration, drag-and-drop, UI polish, and deployment.
+## Features
+- Four-column Kanban board: `To Do`, `In Progress`, `In Review`, `Done`
+- Guest account landing page with username display
+- Create, edit, delete, and drag tasks between columns
+- Supabase persistence with local fallback storage
+- Priority, due date, overdue highlighting, and board summary stats
+- Responsive UI, loading feedback, empty states, and toast errors
 
+## Local Run
+Serve the folder over HTTP so module imports work reliably:
 
-## Quick Start (Local)
-From the project folder:
-cd ~/Desktop/kanban-task-board
-open index.html
-
-
-Or run a local web server and open it in the browser:
+```bash
 cd /Users/sujithrallapalli/Desktop/kanban-task-board
 python3 -m http.server 8000
+```
 
-then open:
-http://localhost:8000
+Then open [http://localhost:8000](http://localhost:8000).
 
-If port 8000 is already in use, try:
-python3 -m http.server 8080
+## Supabase Setup
+Use the steps in [supabase-setup.md](/Users/sujithrallapalli/Desktop/kanban-task-board/supabase-setup.md).
 
-then open:
-http://localhost:8080
+## Deploy
+This project is configured for static hosting on Vercel.
 
-**Workflow**: Click "+ New Task" to create tasks (they start in "To Do"). Drag tasks between columns to change their status!
-
-
-## �� Database Setup (Required)
-Follow [supabase-setup.md](./supabase-setup.md):
-1. Create Supabase project + run SQL
-2. Update `app.js` with your `SUPABASE_URL` + `SUPABASE_ANON_KEY`
-3. Test: Create task → verify in Supabase dashboard
-
-## Features Implemented
-✅ **Required**:
-- [x] Drag & drop across 4 columns (To Do → In Progress → In Review → Done) - **Elegant implementation with smooth animations and visual feedback**
-- [x] Guest auth + RLS (users see only own tasks)
-- [x] Create tasks (title, desc, priority, due date) - **Tasks created in "To Do" column, drag to change status**
-- [x] Real-time persistence
-- [x] Delete tasks
-- [x] Responsive UI + loading/error states
-- [x] LocalStorage fallback
-
-✅ **Advanced**:
-- [x] Priority badges
-- [x] Due dates
-- [x] Stats (total tasks)
-
-## Deploy to Vercel
 ```bash
 npm i -g vercel
-vercel
-# Follow prompts → live URL ready!
+vercel --prod
 ```
 
-## Tech Stack
-- Vanilla JS + modern ES modules
-- Supabase (DB + Auth + RLS)
-- Custom mouse-based drag & drop (no HTML5 Drag API)
-- CDN-hosted Supabase client (no build step)
+After deployment, add the production URL to the final assessment document.
 
-## Database Schema
-```sql
-CREATE TABLE tasks (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  title TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('todo','in_progress','in_review','done')),
-  user_id UUID NOT NULL REFERENCES auth.users(id),
-  description TEXT,
-  priority TEXT CHECK (priority IN ('low','normal','high')),
-  due_date DATE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
--- RLS: auth.uid() = user_id
-```
+## Files
+- [index.html](/Users/sujithrallapalli/Desktop/kanban-task-board/index.html): app structure and UI
+- [style.css](/Users/sujithrallapalli/Desktop/kanban-task-board/style.css): styling and responsive layout
+- [app.js](/Users/sujithrallapalli/Desktop/kanban-task-board/app.js): auth, data, rendering, drag and drop
+- [firstname_lastname_task_manager_assessment.md](/Users/sujithrallapalli/Desktop/kanban-task-board/firstname_lastname_task_manager_assessment.md): editable final submission draft

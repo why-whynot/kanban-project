@@ -88,11 +88,56 @@ class KanbanApp {
   }
 
   useLocalStorage() {
-    // Fallback for demo
-    user = { id: 'demo-guest-' + Date.now() };
+    // Stable fallback identity for offline/demo usage
+    user = { id: this.getLocalGuestId() };
     this.authReady = true;
     this.loadUsername();
     // Don't load tasks - stay on guest page
+  }
+
+  getLocalGuestId() {
+    const storageKey = 'kanban-local-guest-id';
+    let guestId = localStorage.getItem(storageKey);
+    if (!guestId) {
+      guestId = `demo-guest-${Date.now()}`;
+      localStorage.setItem(storageKey, guestId);
+    }
+    return guestId;
+  }
+
+  getTaskStorageKey() {
+    return `tasks_${user?.id || this.getLocalGuestId()}`;
+  }
+
+  persistTasks() {
+    localStorage.setItem(this.getTaskStorageKey(), JSON.stringify(tasks));
+  }
+
+  escapeHtml(value = '') {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  isTaskOverdue(task) {
+    if (!task?.due_date || this.isTaskDone(task)) {
+      return false;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    return task.due_date < today;
+  }
+
+  getEmptyStateMessage(status) {
+    const messages = {
+      todo: 'No tasks in To Do yet. Create a task to start planning.',
+      in_progress: 'Nothing is actively moving right now.',
+      in_review: 'No tasks are waiting for review.',
+      done: 'Done tasks will land here once work is finished.'
+    };
+    return messages[status] || 'No tasks yet.';
   }
 
   loadUsername() {
@@ -227,7 +272,7 @@ class KanbanApp {
         tasks = data || [];
       } else {
         // LocalStorage fallback
-        const stored = localStorage.getItem(`tasks_${user.id}`);
+        const stored = localStorage.getItem(this.getTaskStorageKey());
         tasks = stored ? JSON.parse(stored) : [];
       }
       
@@ -332,7 +377,7 @@ class KanbanApp {
       }
 
       // Always persist to localStorage as backup
-      localStorage.setItem(`tasks_${user?.id || 'demo'}`, JSON.stringify(tasks));
+      this.persistTasks();
 
       this.renderBoard();
       this.updateStats();
@@ -405,7 +450,7 @@ class KanbanApp {
         }
       }
 
-      localStorage.setItem(`tasks_${user?.id || 'demo'}`, JSON.stringify(tasks));
+      this.persistTasks();
       this.renderBoard();
       this.updateStats();
       this.hideTaskModal();
@@ -422,10 +467,11 @@ class KanbanApp {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
+    const previousStatus = task.status;
     task.status = newStatus;
 
     try {
-      if (supabase) {
+      if (supabase && user) {
         const { error } = await supabase
           .from('tasks')
           .update({ status: newStatus })
@@ -433,13 +479,17 @@ class KanbanApp {
           .eq('user_id', user.id);
         if (error) throw error;
       }
-      // LocalStorage update
-      localStorage.setItem(`tasks_${user.id}`, JSON.stringify(tasks));
+      this.persistTasks();
       
       this.renderBoard();
       this.updateStats();
     } catch (error) {
       console.error('Update error:', error);
+      task.status = previousStatus;
+      this.persistTasks();
+      this.renderBoard();
+      this.updateStats();
+      this.showError('Could not move task. Please try again.');
     }
   }
 
@@ -454,20 +504,23 @@ class KanbanApp {
       const statusTasks = tasks.filter(task => task.status === status);
       
       if (statusTasks.length === 0) {
-        container.innerHTML = '<div class="empty-state">No tasks yet. Click + New Task to add one!</div>';
+        container.innerHTML = `<div class="empty-state">${this.getEmptyStateMessage(status)}</div>`;
         return;
       }
 
       container.innerHTML = statusTasks.map(task => {
-        const isOverdue = task.due_date && !this.isTaskDone(task) && new Date(task.due_date) < new Date(new Date().toISOString().split('T')[0]);
+        const isOverdue = this.isTaskOverdue(task);
         const overdueClass = isOverdue ? 'overdue' : '';
+        const safeTitle = this.escapeHtml(task.title);
+        const safeDescription = this.escapeHtml(task.description || '');
+        const createdAt = task.created_at ? new Date(task.created_at).toLocaleDateString() : 'Today';
         return `
         <div class="task priority-${task.priority} ${overdueClass}" data-id="${task.id}" data-status="${task.status}">
           <button class="task-delete" data-id="${task.id}" aria-label="Delete task">×</button>
-          <div class="task-title">${task.title}</div>
-          ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+          <div class="task-title">${safeTitle}</div>
+          ${task.description ? `<div class="task-description">${safeDescription}</div>` : ''}
           <div class="task-meta">
-            <span>${new Date(task.created_at).toLocaleDateString()}</span>
+            <span>${createdAt}</span>
             ${task.due_date ? `<span class="due-date ${isOverdue ? 'due-overdue' : ''}">📅 ${task.due_date}</span>` : ''}
           </div>
         </div>
@@ -502,7 +555,7 @@ class KanbanApp {
         }
       }
 
-      localStorage.setItem(`tasks_${user?.id || 'demo'}`, JSON.stringify(tasks));
+      this.persistTasks();
       this.renderBoard();
       this.updateStats();
       this.showSuccess('Task deleted.');
@@ -518,6 +571,8 @@ class KanbanApp {
 
   updateStats() {
     document.getElementById('total-tasks').textContent = tasks.length;
+    document.getElementById('completed-tasks').textContent = tasks.filter(task => task.status === 'done').length;
+    document.getElementById('overdue-tasks').textContent = tasks.filter(task => this.isTaskOverdue(task)).length;
   }
 
   setupTaskInteractions() {

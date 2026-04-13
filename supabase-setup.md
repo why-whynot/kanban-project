@@ -1,53 +1,58 @@
-# Supabase Database Setup for Kanban Task Board
+# Supabase Setup
 
-## 1. Create Supabase Project
-1. Go to [supabase.com](https://supabase.com) → New Project
-2. Choose free tier, set name/password/region
-3. Wait for DB to be ready (~2min)
+## 1. Create the Project
+1. Create a free Supabase project.
+2. In Authentication settings, enable anonymous sign-ins.
 
-## 2. Enable Auth (Guest Accounts)
-- Dashboard → Authentication → Settings → Enable "Anonymous sign-ins"
-
-## 3. Create Tasks Table + RLS
-Go to SQL Editor and run **exactly**:
+## 2. Create the `tasks` Table
+Run this in the SQL editor:
 
 ```sql
--- Create tasks table matching app.js schema
-CREATE TABLE tasks (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  title TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('todo','in_progress','in_review','done')),
-  user_id UUID NOT NULL REFERENCES auth.users(id),
-  description TEXT,
-  priority TEXT CHECK (priority IN ('low','normal','high')),
-  due_date DATE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+create table if not exists public.tasks (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  status text not null check (status in ('todo', 'in_progress', 'in_review', 'done')),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  description text,
+  priority text default 'normal' check (priority in ('low', 'normal', 'high')),
+  due_date date,
+  created_at timestamptz not null default now()
 );
-
--- Enable Row Level Security
-ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
-
--- RLS Policy: Users only access own tasks
-CREATE POLICY "user_tasks" ON tasks 
-FOR ALL 
-USING (auth.uid()::text = user_id::text);
 ```
 
-## 4. Get Credentials
-- Settings → API
-- Copy **Project URL** and **anon/public key**
+## 3. Enable RLS
+Run this next:
 
-## 5. Update app.js
-Replace placeholders:
+```sql
+alter table public.tasks enable row level security;
+
+create policy "tasks_select_own"
+on public.tasks
+for select
+using (auth.uid() = user_id);
+
+create policy "tasks_insert_own"
+on public.tasks
+for insert
+with check (auth.uid() = user_id);
+
+create policy "tasks_update_own"
+on public.tasks
+for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create policy "tasks_delete_own"
+on public.tasks
+for delete
+using (auth.uid() = user_id);
 ```
-const SUPABASE_URL = 'https://your-project.supabase.co';
-const SUPABASE_ANON_KEY = 'your-anon-key-here';
-```
 
-## Test
-1. `open index.html`
-2. Create task → check Supabase dashboard → Table Editor → tasks
-3. Drag task → status updates in real-time
-4. Open incognito → different guest sees own tasks only
+## 4. Connect the Frontend
+Update the constants near the top of [app.js](/Users/sujithrallapalli/Desktop/kanban-task-board/app.js) with your project URL and public anon key.
 
-**✅ Done! Database ready with persistence + security.**
+## 5. Verify
+1. Start the app locally.
+2. Open it in a normal browser window and create a task.
+3. Open it again in an incognito window and confirm you see a separate anonymous guest workspace.
+4. Confirm tasks are isolated by `user_id` in Supabase.

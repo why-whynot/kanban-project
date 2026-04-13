@@ -42,6 +42,11 @@ header {
   align-items: flex-start;
 }
 
+.header-right {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
 .username-display-group {
   display: flex;
   align-items: center;
@@ -76,9 +81,58 @@ h1 {
 .stats {
   background: #f0f4f8;
   padding: 8px 16px;
-  border-radius: 20px;
-  font-weight: 500;
+  border-radius: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  min-width: 82px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.stats-grid {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stats-label {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: #64748b;
+}
+
+.board-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+  margin-bottom: 18px;
+  color: white;
+}
+
+.eyebrow {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  opacity: 0.8;
+  margin-bottom: 8px;
+}
+
+.board-intro h2 {
+  font-size: 1.5rem;
+  max-width: 560px;
+  line-height: 1.2;
+}
+
+.board-intro-copy {
+  max-width: 440px;
+  color: rgba(255, 255, 255, 0.84);
+  line-height: 1.6;
 }
 
 #add-task-btn,
@@ -295,8 +349,11 @@ h1 {
 .empty-state {
   text-align: center;
   color: #9ca3af;
-  font-style: italic;
   padding: 40px 20px;
+  line-height: 1.6;
+  border: 1px dashed #dbe4f0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fafc, #eef2ff);
 }
 
 .modal {
@@ -484,14 +541,18 @@ h1 {
   header,
   .header-right,
   .header-left,
+  .stats-grid,
   .username-display-group,
-  .form-actions {
+  .form-actions,
+  .board-intro {
     width: 100%;
   }
 
   header,
   .header-right,
-  .form-actions {
+  .form-actions,
+  .board-intro,
+  .stats-grid {
     flex-direction: column;
     align-items: stretch;
   }
