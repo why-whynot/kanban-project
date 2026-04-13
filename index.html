@@ -9,14 +9,23 @@
 <body>
   <div class="app">
     <header>
-      <h1>My Task Board</h1>
-      <div class="stats">
-        <span id="total-tasks">0</span> tasks
+      <div class="header-left">
+        <h1>My Task Board</h1>
+        <div class="username-display-group">
+          <span class="username-label">Signed in as</span>
+          <div id="username-display" class="username">Guest</div>
+        </div>
       </div>
-      <button id="add-task-btn">+ New Task</button>
+      <div class="header-right">
+        <div class="stats">
+          <span id="total-tasks">0</span> tasks
+        </div>
+        <button id="set-username-btn" class="username-btn">👤 Set Name</button>
+        <button id="add-task-btn">+ New Task</button>
+      </div>
     </header>
 
-    <div class="board" id="board">
+    <div class="board" id="main-board" style="display: none;">
       <div class="column" data-status="todo">
         <h2>To Do</h2>
         <div class="tasks" id="todo-tasks"></div>
@@ -40,17 +49,44 @@
       <div class="modal-content">
         <h2 id="modal-title">New Task</h2>
         <form id="task-form">
-          <input type="text" id="task-title" placeholder="Task title" required>
-          <textarea id="task-description" placeholder="Description (optional)"></textarea>
+          <label for="task-title" class="form-label">Task Title:</label>
+          <input type="text" id="task-title" placeholder="Enter task title" required>
+
+          <label for="task-description" class="form-label">Description:</label>
+          <textarea id="task-description" placeholder="Add a short description"></textarea>
+          
+          <label for="task-priority" class="form-label">Priority:</label>
           <select id="task-priority">
             <option value="low">Low</option>
             <option value="normal" selected>Normal</option>
             <option value="high">High</option>
           </select>
+          
+          <label for="task-due-date" class="form-label">Due Date:</label>
           <input type="date" id="task-due-date">
+          
           <div class="form-actions">
             <button type="submit">Create Task</button>
             <button type="button" id="cancel-task">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Guest Account Page (Default View) -->
+    <div class="guest-page" id="guest-page">
+      <div class="guest-content">
+        <h2>👤 Guest Account</h2>
+        <p class="guest-subtitle">Start with a guest account by choosing the username you want shown on your board.</p>
+        <form id="account-form">
+          <label for="username-input" class="form-label">Guest Username:</label>
+          <input type="text" id="username-input" placeholder="Enter your guest username" maxlength="30" required>
+          <div class="form-actions">
+            <button type="submit">Save Name & Continue</button>
+            <button type="button" id="skip-guest">Skip for now</button>
+          </div>
+          <div class="account-info">
+            <small>Changes saved locally for this browser</small>
           </div>
         </form>
       </div>

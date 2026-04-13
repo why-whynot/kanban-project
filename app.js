@@ -16,7 +16,8 @@ class KanbanApp {
     this.initialization = null;
     this.authReady = false;
     this.editingTaskId = null;
-    this.dragTestMode = false; // Add test mode flag
+    this.dragTestMode = false;
+    this.tasksLoaded = false;
 
     // Drag and drop state variables
     this.draggedTask = null;
@@ -33,7 +34,8 @@ class KanbanApp {
     // Bind UI events immediately for responsiveness
     this.bindEvents();
 
-    // Initialize backend and auth
+    // Show guest page first, then init
+    this.showGuestPage();
     this.initialization = this.start();
   }
 
@@ -77,7 +79,8 @@ class KanbanApp {
 
       console.log('Supabase ready, user id:', user?.id);
       this.authReady = true;
-      await this.loadTasks();
+      this.loadUsername();
+      // Don't load tasks yet - stay on guest page until username set
     } catch (error) {
       console.error('Auth error:', error);
       this.useLocalStorage();
@@ -88,7 +91,60 @@ class KanbanApp {
     // Fallback for demo
     user = { id: 'demo-guest-' + Date.now() };
     this.authReady = true;
-    this.loadTasks();
+    this.loadUsername();
+    // Don't load tasks - stay on guest page
+  }
+
+  loadUsername() {
+    const savedUsername = localStorage.getItem('kanban-username') || 'Guest';
+    const usernameDisplay = document.getElementById('username-display');
+    const usernameInput = document.getElementById('username-input');
+    if (usernameDisplay) {
+      usernameDisplay.textContent = savedUsername;
+    }
+    if (usernameInput && savedUsername !== 'Guest') {
+      usernameInput.value = savedUsername;
+    }
+
+    this.showGuestPage();
+  }
+
+  showGuestPage() {
+    const guestPage = document.getElementById('guest-page');
+    const mainBoard = document.getElementById('main-board');
+    if (guestPage) guestPage.style.display = 'flex';
+    if (mainBoard) mainBoard.style.display = 'none';
+  }
+
+  async showBoard() {
+    const guestPage = document.getElementById('guest-page');
+    const mainBoard = document.getElementById('main-board');
+    if (guestPage) guestPage.style.display = 'none';
+    if (mainBoard) mainBoard.style.display = 'flex';
+    if (!this.tasksLoaded) {
+      await this.loadTasks();
+      this.tasksLoaded = true;
+      return;
+    }
+    this.renderBoard();
+    this.updateStats();
+  }
+
+  hideGuestPage() {
+    const guestPage = document.getElementById('guest-page');
+    if (guestPage) guestPage.style.display = 'none';
+  }
+
+  showAccountModal() {
+    this.showGuestPage();
+    document.getElementById('username-input')?.focus();
+  }
+
+  hideAccountModal() {
+    const savedUsername = localStorage.getItem('kanban-username') || 'Guest';
+    if (savedUsername !== 'Guest') {
+      this.showBoard();
+    }
   }
 
   bindEvents() {
@@ -97,13 +153,11 @@ class KanbanApp {
     const addTaskBtn = document.getElementById('add-task-btn');
     const taskForm = document.getElementById('task-form');
     const cancelTask = document.getElementById('cancel-task');
+    const setUsernameBtn = document.getElementById('set-username-btn');
+    const accountForm = document.getElementById('account-form');
 
-    if (!addTaskBtn || !taskForm || !cancelTask) {
-      console.error('❌ bindEvents error: missing UI elements', {
-        addTaskBtn,
-        taskForm,
-        cancelTask
-      });
+    if (!addTaskBtn || !taskForm || !cancelTask || !setUsernameBtn || !accountForm) {
+      console.error('❌ bindEvents error: missing UI elements');
       return;
     }
 
@@ -118,6 +172,23 @@ class KanbanApp {
     });
 
     cancelTask.addEventListener('click', () => this.hideTaskModal());
+
+    // Guest account events
+    setUsernameBtn.addEventListener('click', () => {
+      console.log('👤 Set username clicked');
+      this.showAccountModal();
+    });
+
+    accountForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      console.log('Account form submit triggered');
+      this.saveUsername();
+    });
+
+    const skipGuestBtn = document.getElementById('skip-guest');
+    if (skipGuestBtn) {
+      skipGuestBtn.addEventListener('click', () => this.continueAsGuest());
+    }
 
     // Add test mode toggle (double-click header)
     const header = document.querySelector('header h1');
@@ -169,6 +240,28 @@ class KanbanApp {
     } finally {
       document.body.classList.remove('loading');
     }
+  }
+
+  saveUsername() {
+    const usernameInput = document.getElementById('username-input');
+    const username = usernameInput?.value.trim();
+
+    if (!username) {
+      this.showError('Please enter a username');
+      usernameInput?.focus();
+      return;
+    }
+
+    localStorage.setItem('kanban-username', username);
+    document.getElementById('username-display').textContent = username;
+    this.showSuccess('Username saved');
+    this.showBoard();
+  }
+
+  continueAsGuest() {
+    localStorage.setItem('kanban-username', 'Guest');
+    document.getElementById('username-display').textContent = 'Guest';
+    this.showBoard();
   }
 
   async createTask() {
@@ -428,8 +521,13 @@ class KanbanApp {
   }
 
   setupTaskInteractions() {
-    const board = document.getElementById('board');
+    const board = document.getElementById('main-board');
     let wasDragged = false;
+
+    if (!board) {
+      console.error('❌ setupTaskInteractions error: missing #main-board');
+      return;
+    }
 
     // Click handlers for delete and edit
     board.addEventListener('click', (e) => {
@@ -808,5 +906,5 @@ class KanbanApp {
 
 window.addEventListener('DOMContentLoaded', () => {
   console.log('DOM ready - starting KanbanApp');
-  new KanbanApp();
+  window.kanbanApp = new KanbanApp();
 });

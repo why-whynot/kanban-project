@@ -30,6 +30,40 @@ header {
   backdrop-filter: blur(10px);
 }
 
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-left {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.username-display-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #eef2ff;
+}
+
+.username-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6366f1;
+}
+
+.username {
+  font-weight: 700;
+  color: #1f2937;
+}
+
 h1 {
   font-size: 2rem;
   font-weight: 700;
@@ -47,16 +81,30 @@ h1 {
   color: #64748b;
 }
 
-#add-task-btn {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
+#add-task-btn,
+.username-btn {
   border: none;
   padding: 12px 24px;
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+#add-task-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
   box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
+}
+
+#set-username-btn {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+#set-username-btn:hover {
+  transform: translateY(-2px);
+  background: #e0e7ff;
 }
 
 #add-task-btn:hover {
@@ -269,6 +317,81 @@ h1 {
   justify-content: center;
 }
 
+.guest-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.95), rgba(118, 75, 162, 0.95));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  backdrop-filter: blur(8px);
+}
+
+.guest-content {
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 24px;
+  padding: 48px;
+  width: 90%;
+  max-width: 520px;
+  text-align: center;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.guest-content h2 {
+  font-size: 2rem;
+  margin-bottom: 12px;
+  color: #111827;
+}
+
+.guest-subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+  margin-bottom: 32px;
+  line-height: 1.5;
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+#guest-page .form-actions {
+  gap: 16px;
+}
+
+#guest-page .form-actions button[type="submit"] {
+  flex: 1;
+  background: linear-gradient(135deg, #10b981, #059669);
+  font-size: 1rem;
+  padding: 14px 28px;
+}
+
+#skip-guest {
+  background: #f3f4f6;
+  color: #374151;
+  border: 2px solid #e5e7eb;
+  flex: 1;
+}
+
+#skip-guest:hover {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+.account-info {
+  margin-top: 24px;
+  color: #9ca3af;
+}
+
 .modal-content {
   background: white;
   border-radius: 16px;
@@ -285,14 +408,31 @@ h1 {
 
 #task-form input,
 #task-form textarea,
-#task-form select {
+#task-form select,
+#account-form input {
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  margin-bottom: 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
   font-size: 1rem;
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+#task-form textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+#task-form input:focus,
+#task-form textarea:focus,
+#task-form select:focus,
+#account-form input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  transform: translateY(-1px);
 }
 
 #task-form input:focus,
@@ -337,6 +477,29 @@ h1 {
 }
 
 @media (max-width: 768px) {
+  .app {
+    padding: 14px;
+  }
+
+  header,
+  .header-right,
+  .header-left,
+  .username-display-group,
+  .form-actions {
+    width: 100%;
+  }
+
+  header,
+  .header-right,
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .username-display-group {
+    justify-content: space-between;
+  }
+
   .board {
     flex-direction: column;
     height: auto;
@@ -344,5 +507,9 @@ h1 {
   
   .column {
     width: 100%;
+  }
+
+  .guest-content {
+    padding: 32px 22px;
   }
 }
