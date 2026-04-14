@@ -432,18 +432,6 @@ h1 {
   padding: 14px 28px;
 }
 
-#skip-guest {
-  background: #f3f4f6;
-  color: #374151;
-  border: 2px solid #e5e7eb;
-  flex: 1;
-}
-
-#skip-guest:hover {
-  background: #e5e7eb;
-  border-color: #d1d5db;
-}
-
 .account-info {
   margin-top: 24px;
   color: #9ca3af;

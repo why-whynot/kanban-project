@@ -32,7 +32,7 @@ on public.tasks
 for select
 using (
   auth.uid() = user_id
-  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'username_key', '')
 );
 
 create policy "tasks_insert_own"
@@ -40,7 +40,7 @@ on public.tasks
 for insert
 with check (
   auth.uid() = user_id
-  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'username_key', '')
 );
 
 create policy "tasks_update_own"
@@ -48,11 +48,11 @@ on public.tasks
 for update
 using (
   auth.uid() = user_id
-  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'username_key', '')
 )
 with check (
   auth.uid() = user_id
-  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'username_key', '')
 );
 
 create policy "tasks_delete_own"
@@ -60,7 +60,7 @@ on public.tasks
 for delete
 using (
   auth.uid() = user_id
-  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'username_key', '')
 );
 ```
 
@@ -70,6 +70,5 @@ Update the constants near the top of [app.js](/Users/sujithrallapalli/Desktop/ka
 ## 5. Verify
 1. Start the app locally.
 2. Open it in a normal browser window and create a task.
-3. Open it again in an incognito window and confirm you see a separate anonymous guest workspace.
-4. Set the same username in both browsers and confirm the named task list is shared.
-5. Use a different username and confirm that task list is separate.
+3. Open it again in an incognito window and enter the same profile name to confirm the same task list is shared.
+4. Enter a different profile name and confirm a new empty board is created.

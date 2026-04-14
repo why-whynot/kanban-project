@@ -80,6 +80,7 @@ class KanbanApp {
 
       console.log('Supabase ready, user id:', user?.id);
       this.authReady = true;
+      this.ownerNameSupport = this.supportsProfileSharing(user);
       this.loadUsername();
       // Don't load tasks yet - stay on guest page until username set
     } catch (error) {
@@ -115,12 +116,21 @@ class KanbanApp {
   }
 
   getSavedUsername() {
-    return localStorage.getItem(this.getUsernameStorageKey()) || 'Guest';
+    return localStorage.getItem(this.getUsernameStorageKey()) || '';
+  }
+
+  normalizeUsername(username = '') {
+    return username.trim().toLowerCase();
   }
 
   getCurrentOwnerName() {
-    const username = this.getSavedUsername().trim();
-    return username && username !== 'Guest' ? username : null;
+    const username = this.getSavedUsername();
+    return this.normalizeUsername(username) || null;
+  }
+
+  supportsProfileSharing(currentUser = user) {
+    const usernameKey = currentUser?.user_metadata?.username_key;
+    return Boolean(usernameKey && usernameKey === this.getCurrentOwnerName());
   }
 
   isOwnerNameSchemaError(error) {
@@ -164,10 +174,15 @@ class KanbanApp {
     const usernameDisplay = document.getElementById('username-display');
     const usernameInput = document.getElementById('username-input');
     if (usernameDisplay) {
-      usernameDisplay.textContent = savedUsername;
+      usernameDisplay.textContent = savedUsername || 'Not signed in';
     }
-    if (usernameInput && savedUsername !== 'Guest') {
+    if (usernameInput && savedUsername) {
       usernameInput.value = savedUsername;
+    }
+
+    if (savedUsername) {
+      this.showBoard();
+      return;
     }
 
     this.showGuestPage();
@@ -181,6 +196,12 @@ class KanbanApp {
   }
 
   async showBoard() {
+    if (!this.getCurrentOwnerName()) {
+      this.showError('Enter a profile name to continue');
+      this.showGuestPage();
+      return;
+    }
+
     const guestPage = document.getElementById('guest-page');
     const mainBoard = document.getElementById('main-board');
     if (guestPage) guestPage.style.display = 'none';
@@ -206,7 +227,7 @@ class KanbanApp {
 
   hideAccountModal() {
     const savedUsername = this.getSavedUsername();
-    if (savedUsername !== 'Guest') {
+    if (savedUsername) {
       this.showBoard();
     }
   }
@@ -249,11 +270,6 @@ class KanbanApp {
       this.saveUsername();
     });
 
-    const skipGuestBtn = document.getElementById('skip-guest');
-    if (skipGuestBtn) {
-      skipGuestBtn.addEventListener('click', () => this.continueAsGuest());
-    }
-
     // Add test mode toggle (double-click header)
     const header = document.querySelector('header h1');
     if (header) {
@@ -285,7 +301,7 @@ class KanbanApp {
         let data;
         let error;
 
-        if (ownerName && this.ownerNameSupport !== false) {
+        if (ownerName && this.ownerNameSupport !== false && this.supportsProfileSharing()) {
           ({ data, error } = await supabase
             .from('tasks')
             .select('*')
@@ -330,11 +346,12 @@ class KanbanApp {
     }
   }
 
-  saveUsername() {
+  async saveUsername() {
     const usernameInput = document.getElementById('username-input');
     const username = usernameInput?.value.trim();
+    const normalizedUsername = this.normalizeUsername(username);
 
-    if (!username) {
+    if (!normalizedUsername) {
       this.showError('Please enter a username');
       usernameInput?.focus();
       return;
@@ -342,23 +359,44 @@ class KanbanApp {
 
     localStorage.setItem(this.getUsernameStorageKey(), username);
     if (supabase) {
-      supabase.auth.updateUser({ data: { display_name: username } }).catch((error) => {
+      try {
+        const { data, error } = await supabase.auth.updateUser({
+          data: { display_name: username, username_key: normalizedUsername }
+        });
+        if (error) throw error;
+
+        const { data: refreshedSessionData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) throw refreshError;
+
+        user = refreshedSessionData.session?.user || data.user || user;
+        this.ownerNameSupport = this.supportsProfileSharing(user);
+      } catch (error) {
         console.warn('Could not sync username to Supabase auth metadata:', error?.message || error);
-      });
+        this.ownerNameSupport = false;
+      }
     }
+
+    let profileExists = false;
+    if (supabase && user && this.ownerNameSupport !== false && this.supportsProfileSharing(user)) {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('owner_name', normalizedUsername)
+        .limit(1);
+
+      if (!error) {
+        profileExists = Array.isArray(data) && data.length > 0;
+        this.ownerNameSupport = true;
+      } else if (this.isOwnerNameSchemaError(error)) {
+        this.ownerNameSupport = false;
+      }
+    }
+
     this.tasksLoaded = false;
     tasks = [];
     document.getElementById('username-display').textContent = username;
-    this.showSuccess('Username saved');
-    this.showBoard();
-  }
-
-  continueAsGuest() {
-    localStorage.setItem(this.getUsernameStorageKey(), 'Guest');
-    this.tasksLoaded = false;
-    tasks = [];
-    document.getElementById('username-display').textContent = 'Guest';
-    this.showBoard();
+    this.showSuccess(profileExists ? `Welcome back, ${username}` : `Created new profile for ${username}`);
+    await this.showBoard();
   }
 
   async createTask() {

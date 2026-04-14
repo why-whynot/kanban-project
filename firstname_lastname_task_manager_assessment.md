@@ -56,7 +56,7 @@ on public.tasks
 for select
 using (
   auth.uid() = user_id
-  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'username_key', '')
 );
 
 create policy "tasks_insert_own"
@@ -64,7 +64,7 @@ on public.tasks
 for insert
 with check (
   auth.uid() = user_id
-  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'username_key', '')
 );
 
 create policy "tasks_update_own"
@@ -72,11 +72,11 @@ on public.tasks
 for update
 using (
   auth.uid() = user_id
-  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'username_key', '')
 )
 with check (
   auth.uid() = user_id
-  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'username_key', '')
 );
 
 create policy "tasks_delete_own"
@@ -84,7 +84,7 @@ on public.tasks
 for delete
 using (
   auth.uid() = user_id
-  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'display_name', '')
+  or owner_name = coalesce(auth.jwt() -> 'user_metadata' ->> 'username_key', '')
 );
 ```
 

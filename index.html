@@ -13,7 +13,7 @@
         <h1>My Task Board</h1>
         <div class="username-display-group">
           <span class="username-label">Signed in as</span>
-          <div id="username-display" class="username">Guest</div>
+          <div id="username-display" class="username">Not signed in</div>
         </div>
       </div>
       <div class="header-right">
@@ -31,17 +31,17 @@
             <span class="stats-label">Overdue</span>
           </div>
         </div>
-        <button id="set-username-btn" class="username-btn">👤 Set Name</button>
+        <button id="set-username-btn" class="username-btn">👤 Switch Profile</button>
         <button id="add-task-btn">+ New Task</button>
       </div>
     </header>
 
     <section class="board-intro">
       <div>
-        <p class="eyebrow">Guest Workspace</p>
+        <p class="eyebrow">Shared Profiles</p>
         <h2>Track work across every stage without leaving the board.</h2>
       </div>
-      <p class="board-intro-copy">Anonymous Supabase sessions keep each guest’s tasks isolated while the board stays fast, visual, and easy to manage.</p>
+      <p class="board-intro-copy">Enter a profile name to load that task board from any browser. If the name has not been used yet, a new profile is created automatically.</p>
     </section>
 
     <div class="board" id="main-board" style="display: none;">
@@ -92,20 +92,19 @@
       </div>
     </div>
 
-    <!-- Guest Account Page (Default View) -->
+    <!-- Profile Entry Page -->
     <div class="guest-page" id="guest-page">
       <div class="guest-content">
-        <h2>👤 Guest Account</h2>
-        <p class="guest-subtitle">A guest session is created automatically in the background. Choose the username you want shown on your board, then jump in.</p>
+        <h2>👤 Open Your Profile</h2>
+        <p class="guest-subtitle">Enter your name to open your task board. If the profile does not exist yet, the app will create it for you automatically.</p>
         <form id="account-form">
-          <label for="username-input" class="form-label">Guest Username:</label>
-          <input type="text" id="username-input" placeholder="Enter your guest username" maxlength="30" required>
+          <label for="username-input" class="form-label">Profile Name:</label>
+          <input type="text" id="username-input" placeholder="Enter your profile name" maxlength="30" required>
           <div class="form-actions">
-            <button type="submit">Save Name & Continue</button>
-            <button type="button" id="skip-guest">Skip for now</button>
+            <button type="submit">Open Profile</button>
           </div>
           <div class="account-info">
-            <small>Changes saved locally for this browser</small>
+            <small>A name is required before you can use the board</small>
           </div>
         </form>
       </div>
